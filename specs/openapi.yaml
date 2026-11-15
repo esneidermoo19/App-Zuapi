@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Conversor API
-  version: 0.1.0
+  version: 0.2.0
 servers:
   - url: /api/v1
 paths:
@@ -21,3 +21,125 @@ paths:
                   status:
                     type: string
                     enum: [ok]
+
+  /audio/convert:
+    post:
+      summary: Crear un job de conversion de audio
+      operationId: convertAudio
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, target_format]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                target_format:
+                  type: string
+                  description: "Formato de salida. Permitidos: mp3, wav, ogg, flac, m4a."
+      responses:
+        "202":
+          description: Job creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "413":
+          description: "Archivo demasiado grande (code: file_too_large)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: "Formato de salida no soportado (code: unsupported_format)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /jobs/{job_id}:
+    get:
+      summary: Consultar el estado de un job
+      operationId: getJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Estado del job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: "Job inexistente (code: job_not_found)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /jobs/{job_id}/download:
+    get:
+      summary: Descargar el resultado de un job terminado
+      operationId: downloadJob
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Archivo convertido
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: "Job inexistente (code: job_not_found)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Job aun no terminado o fallido (code: job_not_ready)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    Job:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, processing, done, failed]
+        error:
+          type: [string, "null"]
+          description: "Codigo de error si status es failed (ej. invalid_file)"
+        download_url:
+          type: [string, "null"]
+    ErrorResponse:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
