@@ -2,6 +2,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.jobs import router as jobs_router
 from app.modules.audio.router import router as audio_router
 from app.modules.documents.router import router as documents_router
 from app.modules.images.router import router as images_router
@@ -26,4 +27,5 @@ def health() -> dict[str, str]:
 api.include_router(audio_router)
 api.include_router(documents_router)
 api.include_router(images_router)
+api.include_router(jobs_router)
 app.include_router(api)
